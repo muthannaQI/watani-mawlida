@@ -7,6 +7,12 @@ const dayName = (d) => new Date(d).toLocaleDateString("ar-IQ", { timeZone: TZ, w
 const ar = (n) => Number(n).toLocaleString("ar-IQ");
 const keyOf = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 const dayStart = (key) => new Date(key + "T00:00:00+03:00").getTime();
+const MAX_RANGE = 95;   // days
+// Saturday of the current week (the Iraqi week starts on Saturday)
+function weekStartKey(){
+  const t = keyOf(new Date()), dow = new Date(t + "T12:00:00+03:00").getUTCDay();   // 0 = Sunday … 6 = Saturday
+  return keyOf(new Date(dayStart(t) - ((dow + 1) % 7)*DAY));
+}
 function dur(ms){ const m = Math.max(0, Math.round(ms/60000)), h = Math.floor(m/60), dd = Math.floor(h/24);
   if (dd >= 2) return `${ar(dd)} يوم ${ar(h%24)} س`;
   return h ? `${ar(h)} س ${ar(m%60)} د` : `${ar(m)} د`; }
@@ -24,7 +30,7 @@ function relDay(d){
 // since = first report from the device, end = last moment we have data for (now, or last_seen).
 function timelineRows(r, gridOffs, parts, since, end, now){
   const sFrom = dayStart(r.from), sTo = dayStart(r.to);
-  const n = Math.min(Math.round((sTo - sFrom)/DAY) + 1, 62);
+  const n = Math.min(Math.round((sTo - sFrom)/DAY) + 1, MAX_RANGE);
   const todayStart = dayStart(keyOf(new Date(now)));
   const seg = (k, a, z, dayS) => `<i class="${k}" style="right:${(a-dayS)/DAY*100}%;width:${(z-a)/DAY*100}%"></i>`;
   const rows = [];

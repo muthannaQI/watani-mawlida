@@ -126,3 +126,9 @@ tr:last-child td{border-bottom:none}
 .bar i.none{background:var(--off)}
 .pd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
 .pd.gen{background:var(--gen)} .pd.none{background:var(--off)}
+/* period: from / to */
+.range{display:flex;gap:8px;margin-bottom:10px}
+.rf{flex:1;min-width:0;display:flex;align-items:center;gap:6px;background:var(--seg-bg);border:1px solid var(--glass-brd);border-radius:13px;padding:4px 10px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.rf span{flex:none;font-size:12.5px;font-weight:600;color:var(--mute)}
+.rf input{flex:1;min-width:0;width:100%;border:none;background:transparent;font:inherit;font-size:14px;color:var(--text);padding:6px 0;outline:none}

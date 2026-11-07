@@ -42,18 +42,10 @@
     </div>
   </div>
 
-  <!-- period selector -->
-  <div class="seg" id="seg">
-    <button data-m="w1" class="act">أسبوع</button>
-    <button data-m="w2">أسبوعين</button>
-    <button data-m="w3">٣ أسابيع</button>
-    <button data-m="month">الشهر</button>
-    <button data-m="custom">مخصّص</button>
-  </div>
-  <div class="custom" id="custom">
-    <div class="fld"><label>من</label><input type="date" id="fromD"></div>
-    <div class="fld"><label>إلى</label><input type="date" id="toD"></div>
-    <button class="go" id="goBtn">عرض</button>
+  <!-- period: from / to (default = current week, Saturday → today) -->
+  <div class="range">
+    <label class="rf"><span>من</span><input type="date" id="fromD"></label>
+    <label class="rf"><span>إلى</span><input type="date" id="toD"></label>
   </div>
 
   <div class="card">
@@ -110,23 +102,20 @@ const TEXT = {
   gen:  { on: "المولدة شغّالة", off: "المولدة مطفأة", back: "اشتغلت", gone: "انطفأت" },
 };
 
-let mode = "w1", selDay = "", data = null, range = null, parts = [], END = 0;
+let selDay = "", data = null, range = null, parts = [], END = 0;
 
+// Read the from/to fields (swap if reversed, no future dates, at most MAX_RANGE days).
 function rangeOf(){
   const today = keyOf(new Date());
-  if (mode === "custom"){
-    let f = $("fromD").value || today, t = $("toD").value || today;
-    if (f > t) [f, t] = [t, f];
-    return { from:f, to:t };
-  }
-  if (mode === "month"){
-    const [y,m] = new Intl.DateTimeFormat("en-CA",{ timeZone:TZ, year:"numeric", month:"2-digit" }).format(new Date()).split("-").map(Number);
-    const last = new Date(y, m, 0).getDate(), mm = String(m).padStart(2,"0");
-    return { from:`${y}-${mm}-01`, to:`${y}-${mm}-${String(last).padStart(2,"0")}` };
-  }
-  const n = mode === "w1" ? 7 : mode === "w2" ? 14 : 21;
-  return { from: keyOf(new Date(Date.now() - (n-1)*DAY)), to: today };
+  let f = $("fromD").value || weekStartKey(), t = $("toD").value || today;
+  if (t > today) t = today;
+  if (f > t) [f, t] = [t, f];
+  const minF = keyOf(new Date(dayStart(t) - (MAX_RANGE - 1)*DAY));
+  if (f < minF) f = minF;
+  $("fromD").value = f; $("toD").value = t;
+  return { from:f, to:t };
 }
+const live = () => range && range.to >= keyOf(new Date());   // auto-refresh only if the range reaches today
 
 async function load(){
   if (!CRED) { showErr("افتح رابط التطبيق من ملف Google Sheet الخاص بجهازك (القائمة ⚡ وطني ومولدة ← الإعداد والروابط)."); return; }
@@ -218,14 +207,7 @@ function renderLog(){
   }).join("") : `<tr><td colspan="4" class="empty">${selDay ? "لم تنقطع الوطنية في هذا اليوم" : "لا توجد انقطاعات مسجّلة في هذه المدة"}</td></tr>`;
 }
 
-$("seg").addEventListener("click", (e) => {
-  const b = e.target.closest("button"); if (!b) return;
-  mode = b.dataset.m; selDay = "";
-  document.querySelectorAll("#seg button").forEach(x => x.classList.toggle("act", x === b));
-  $("custom").classList.toggle("show", mode === "custom");
-  if (mode !== "custom") load();
-});
-$("goBtn").addEventListener("click", () => { selDay = ""; load(); });
+["fromD", "toD"].forEach(id => $(id).addEventListener("change", () => { selDay = ""; load(); }));
 $("timeline").addEventListener("click", (e) => {
   const row = e.target.closest(".tl-row"); if (!row) return;
   selDay = (selDay === row.dataset.key) ? "" : row.dataset.key;
@@ -234,8 +216,9 @@ $("timeline").addEventListener("click", (e) => {
 });
 
 (function initDates(){
-  const today = keyOf(new Date()), weekAgo = keyOf(new Date(Date.now() - 6*DAY));
-  $("toD").value = today; $("toD").max = today; $("fromD").value = weekAgo; $("fromD").max = today;
+  const today = keyOf(new Date());
+  $("fromD").value = weekStartKey(); $("toD").value = today;
+  $("fromD").max = today; $("toD").max = today;
 })();
 
 setupTheme($("themeBtn"));
@@ -243,8 +226,8 @@ setupInstall($("installBtn"), $("sheet"), $("sheetTitle"), $("sheetBody"), $("sh
 
 selDay = keyOf(new Date());   // focus on today when the app opens
 load();
-setInterval(() => { if (!document.hidden && mode !== "custom") load(); }, 60000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden && mode !== "custom") load(); });
+setInterval(() => { if (!document.hidden && live()) load(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && live()) load(); });
 </script>
 </body>
 </html>
