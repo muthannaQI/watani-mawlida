@@ -132,3 +132,7 @@ tr:last-child td{border-bottom:none}
   -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .rf span{flex:none;font-size:12.5px;font-weight:600;color:var(--mute)}
 .rf input{flex:1;min-width:0;width:100%;border:none;background:transparent;font:inherit;font-size:14px;color:var(--text);padding:6px 0;outline:none}
+.rf{position:relative}
+.rf .dv{flex:1;min-width:0;font-size:14.5px;font-weight:600;color:var(--text);padding:7px 0;direction:ltr;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rf .ci{flex:none;font-size:14px;opacity:.75}
+.rf input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;margin:0;border:0}

@@ -44,8 +44,8 @@
 
   <!-- period: from / to (default = current week, Saturday → today) -->
   <div class="range">
-    <label class="rf"><span>من</span><input type="date" id="fromD"></label>
-    <label class="rf"><span>إلى</span><input type="date" id="toD"></label>
+    <label class="rf"><span>من</span><b class="dv"></b><span class="ci">📅</span><input type="date" id="fromD"></label>
+    <label class="rf"><span>إلى</span><b class="dv"></b><span class="ci">📅</span><input type="date" id="toD"></label>
   </div>
 
   <div class="card">
@@ -112,7 +112,7 @@ function rangeOf(){
   if (f > t) [f, t] = [t, f];
   const minF = keyOf(new Date(dayStart(t) - (MAX_RANGE - 1)*DAY));
   if (f < minF) f = minF;
-  $("fromD").value = f; $("toD").value = t;
+  $("fromD").value = f; $("toD").value = t; syncDates();
   return { from:f, to:t };
 }
 const live = () => range && range.to >= keyOf(new Date());   // auto-refresh only if the range reaches today
@@ -207,6 +207,18 @@ function renderLog(){
   }).join("") : `<tr><td colspan="4" class="empty">${selDay ? "لم تنقطع الوطنية في هذا اليوم" : "لا توجد انقطاعات مسجّلة في هذه المدة"}</td></tr>`;
 }
 
+// Show dates as yyyy/mm/dd (native date fields follow the phone's format, so they stay invisible on top)
+function syncDates(){
+  document.querySelectorAll(".rf input[type=date]").forEach(i => {
+    const v = i.parentElement.querySelector(".dv");
+    if (v) v.textContent = i.value ? i.value.replace(/-/g, "/") : "—";
+  });
+}
+document.querySelectorAll(".rf input[type=date]").forEach(i => {
+  i.addEventListener("input", syncDates);
+  i.addEventListener("change", syncDates);
+  i.addEventListener("click", () => { try { i.showPicker(); } catch (e) {} });
+});
 ["fromD", "toD"].forEach(id => $(id).addEventListener("change", () => { selDay = ""; load(); }));
 $("timeline").addEventListener("click", (e) => {
   const row = e.target.closest(".tl-row"); if (!row) return;
@@ -219,6 +231,7 @@ $("timeline").addEventListener("click", (e) => {
   const today = keyOf(new Date());
   $("fromD").value = weekStartKey(); $("toD").value = today;
   $("fromD").max = today; $("toD").max = today;
+  syncDates();
 })();
 
 setupTheme($("themeBtn"));
