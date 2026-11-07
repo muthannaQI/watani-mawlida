@@ -10,8 +10,9 @@
 <script>
   // a customer who already opened their link goes straight to their app
   try{
-    const k = new URLSearchParams(location.search).get("k") || localStorage.getItem("wm_view");
-    if (k && /^[0-9a-f]{24}$/.test(k)) location.replace("app.html?k=" + k);
+    const q = new URLSearchParams(location.search);
+    if (q.get("s") && q.get("k")) location.replace("app.html" + location.search);
+    else if (localStorage.getItem("wm_cred")) location.replace("app.html");
   }catch(e){}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,13 +41,15 @@
     <ul class="feat">
       <li><span class="ic">⚡</span><span><b>حالة لحظية</b>الوطنية موجودة أو مقطوعة، والمولدة شغّالة أو مطفأة.</span></li>
       <li><span class="ic">🕑</span><span><b>سجل دقيق</b>وقت كل انقطاع ورجوع ومدته، يومًا بيوم.</span></li>
+      <li><span class="ic">🔒</span><span><b>بياناتك لك وحدك</b>السجل في Google Sheet بحسابك، تفتحه أو تحمّله Excel متى شئت.</span></li>
       <li><span class="ic">📊</span><span><b>مخطط الأيام</b>أسبوع، أسبوعين، شهر أو أي فترة تختارها.</span></li>
       <li><span class="ic">📲</span><span><b>تطبيق على الشاشة</b>يُثبَّت بأيقونة مثل أي تطبيق، بدون متجر.</span></li>
     </ul>
   </div>
   <div class="card" style="text-align:center;font-size:14.5px">
     يعمل مع جهاز «وطني ومولدة» الذي يُركَّب في لوحة الكهرباء.<br>
-    إذا كان لديك الجهاز، افتح <b>الرابط أو رمز QR</b> الذي وصلك معه.
+    بياناتك تُحفظ في <b>Google Sheet داخل حسابك أنت فقط</b>.<br>
+    افتح رابط التطبيق أو رمز QR من ملفك (القائمة ⚡ وطني ومولدة).
   </div>
   <div class="foot">وطني ومولدة · © مثنى الصافي</div>
 <script src="common.js"></script>

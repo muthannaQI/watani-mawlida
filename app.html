@@ -94,16 +94,20 @@
   </div>
 </div>
 
-<script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 
-// customer key: from the link (?k=), remembered so the home-screen icon keeps working
-const KEY = (() => {
-  const k = new URLSearchParams(location.search).get("k");
-  if (k && /^[0-9a-f]{24}$/.test(k)) { try { localStorage.setItem("wm_view", k); } catch {} return k; }
-  try { return localStorage.getItem("wm_view"); } catch { return null; }
+// The customer's link carries their Google Apps Script id (?s=) and view key (?k=). Both are
+// remembered so the home-screen icon keeps working. Data comes straight from the customer's
+// own Google Sheet; nothing passes through any other server.
+const CRED = (() => {
+  const q = new URLSearchParams(location.search), s = q.get("s"), k = q.get("k");
+  if (s && k && /^[\w-]{20,120}$/.test(s) && /^[0-9a-f]{24}$/.test(k)) {
+    try { localStorage.setItem("wm_cred", JSON.stringify({ s, k })); } catch {}
+    return { s, k };
+  }
+  try { return JSON.parse(localStorage.getItem("wm_cred") || "null"); } catch { return null; }
 })();
 
 const TEXT = {
@@ -132,15 +136,18 @@ function rangeOf(){
 }
 
 async function load(){
-  if (!KEY) { showErr("افتح الرابط الذي وصلك مع الجهاز لعرض حالة الكهرباء عندك."); return; }
+  if (!CRED) { showErr("افتح رابط التطبيق من ملف Google Sheet الخاص بجهازك (القائمة ⚡ وطني ومولدة ← الإعداد والروابط)."); return; }
   range = rangeOf();
   try{
-    const res = await fetch(`${WM_API}?r=view&k=${KEY}&from=${range.from}&to=${range.to}`, { cache:"no-store" });
-    if (!res.ok) throw new Error(res.status === 403 ? "الرابط غير صالح. تواصل مع البائع للحصول على رابط جديد." : "تعذّر الاتصال (" + res.status + ")");
-    data = await res.json();
+    const url = `https://script.google.com/macros/s/${CRED.s}/exec?k=${CRED.k}&from=${range.from}&to=${range.to}`;
+    const res = await fetch(url, { cache:"no-store" });
+    if (!res.ok) throw new Error("تعذّر الاتصال بملف Google (" + res.status + ")");
+    const j = await res.json();
+    if (j.error) throw new Error(j.error === "forbidden" ? "الرابط غير صالح. افتح الرابط الجديد من ملف Google Sheet." : j.error);
+    data = j;
     $("err").style.display = "none";
     render();
-  }catch(e){ showErr(e.message); }
+  }catch(e){ showErr(e instanceof TypeError ? "تعذّر الاتصال. تأكد من الإنترنت ومن نشر السكربت (Anyone)." : e.message); }
 }
 function showErr(m){ $("err").textContent = m; $("err").style.display = "block"; }
 
@@ -233,7 +240,7 @@ setupInstall($("installBtn"), $("sheet"), $("sheetTitle"), $("sheetBody"), $("sh
 
 selDay = keyOf(new Date());   // focus on today when the app opens
 load();
-setInterval(() => { if (!document.hidden && mode !== "custom") load(); }, 30000);
+setInterval(() => { if (!document.hidden && mode !== "custom") load(); }, 60000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && mode !== "custom") load(); });
 </script>
 </body>

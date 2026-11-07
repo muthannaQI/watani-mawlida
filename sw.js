@@ -1,7 +1,7 @@
 // Network-first service worker: updates appear at once, the cached copy is used only offline.
 // The data API is on another origin and always goes to the network.
-const CACHE = "wm-v1";
-const SHELL = ["./app.html", "./style.css", "./common.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
+const CACHE = "wm-v2";
+const SHELL = ["./app.html", "./style.css", "./common.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
