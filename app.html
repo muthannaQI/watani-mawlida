@@ -71,7 +71,7 @@
     </div>
     <div id="timeline"></div>
     <div class="legend">
-      <span><i style="background:var(--onfill)"></i> <span id="lgOn">موجودة</span></span>
+      <span><i class="sw-on"></i> <span id="lgOn">موجودة</span></span>
       <span><i style="background:var(--off)"></i> <span id="lgOff">مقطوعة</span></span>
       <span><i style="background:var(--nodata);border:1px solid var(--line)"></i> لا توجد بيانات</span>
     </div>
@@ -152,16 +152,16 @@ async function load(){
 function showErr(m){ $("err").textContent = m; $("err").style.display = "block"; }
 
 function statusRow(which, rowId, tId, sId){
-  const s = data[which], T = TEXT[which], row = $(rowId);
+  const s = data[which], T = TEXT[which], row = $(rowId), g = which === "gen" ? " gen" : "";
   const open = s.offs.find(o => !o.ended_at), lastEnd = s.offs.find(o => o.ended_at);
   if (s.on == null){
-    row.className = "srow unk"; $(tId).textContent = which === "grid" ? "الوطنية" : "المولدة";
+    row.className = "srow unk" + g; $(tId).textContent = which === "grid" ? "الوطنية" : "المولدة";
     $(sId).textContent = "بانتظار أول قراءة من الجهاز…";
   } else if (s.on){
-    row.className = "srow on"; $(tId).textContent = T.on;
+    row.className = "srow on" + g; $(tId).textContent = T.on;
     $(sId).textContent = lastEnd ? `${T.back} ${relDay(lastEnd.ended_at)}الساعة ${tm(lastEnd.ended_at)}` : "";
   } else {
-    row.className = "srow off"; $(tId).textContent = T.off;
+    row.className = "srow off" + g; $(tId).textContent = T.off;
     $(sId).textContent = open ? `منذ ${dur(Date.now() - new Date(open.started_at).getTime())} · ${T.gone} ${relDay(open.started_at)}${tm(open.started_at)}` : "";
   }
 }
@@ -185,6 +185,7 @@ function render(){
   }
 
   const T = TEXT[line];
+  document.body.classList.toggle("genview", line === "gen");
   $("lgOn").textContent = T.lgOn; $("lgOff").textContent = T.lgOff;
   const offs = data[line] ? data[line].offs : [];
   const now = Date.now();
