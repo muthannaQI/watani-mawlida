@@ -19,22 +19,28 @@ function relDay(d){
   return `قبل ${ar(diff)} ${diff <= 10 ? "أيام" : "يومًا"} `;
 }
 
-// One row per day: day | 24h bar | number of offs | total off time.
+// One row per day: day | 24h bar | number of national cuts | total national-off time.
+// Bar colours: green = national grid, yellow = on the generator, red = no power.
 // since = first report from the device, end = last moment we have data for (now, or last_seen).
-function timelineRows(r, offs, since, end, now){
+function timelineRows(r, gridOffs, parts, since, end, now){
   const sFrom = dayStart(r.from), sTo = dayStart(r.to);
   const n = Math.min(Math.round((sTo - sFrom)/DAY) + 1, 62);
   const todayStart = dayStart(keyOf(new Date(now)));
+  const seg = (k, a, z, dayS) => `<i class="${k}" style="right:${(a-dayS)/DAY*100}%;width:${(z-a)/DAY*100}%"></i>`;
   const rows = [];
   for (let i = 0; i < n; i++){
     const dayS = sTo - i*DAY, dayE = dayS + DAY, key = keyOf(new Date(dayS));
     let segs = "", offMs = 0, offCount = 0;
     const gS = Math.max(dayS, since), gE = Math.min(dayE, end);
-    if (gE > gS) segs += `<i class="on" style="right:${(gS-dayS)/DAY*100}%;width:${(gE-gS)/DAY*100}%"></i>`;
-    for (const o of offs){
+    if (gE > gS) segs += seg("on", gS, gE, dayS);
+    for (const p of parts){
+      const a = Math.max(dayS, p.a), z = Math.min(dayE, p.z);
+      if (z > a) segs += seg(p.k, a, z, dayS);
+    }
+    for (const o of gridOffs){
       const a = Math.max(dayS, new Date(o.started_at).getTime());
       const z = Math.min(dayE, o.ended_at ? new Date(o.ended_at).getTime() : end);
-      if (z > a){ segs += `<i class="off" style="right:${(a-dayS)/DAY*100}%;width:${(z-a)/DAY*100}%"></i>`; offMs += z - a; offCount++; }
+      if (z > a){ offMs += z - a; offCount++; }
     }
     const label = dayS === todayStart ? "اليوم" : dayName(dayS);
     rows.push(`<div class="tl-row" data-key="${key}"><span class="d">${label}</span><div class="bar">${segs}</div>`

@@ -122,6 +122,7 @@ tr:last-child td{border-bottom:none}
 /* generator = yellow (running), red (off) */
 .srow.on.gen{background:var(--genbg);border-color:var(--genbrd)}
 .srow.on.gen .dot{background:var(--gen)}
-.sw-on{background:var(--onfill)}
-.genview .bar i.on,.genview .sw-on{background:var(--genfill)}
-#lineSeg button[data-l=gen].act{background:var(--genbg);box-shadow:0 0 0 1px var(--genbrd) inset}
+.bar i.gen{background:var(--genfill)}
+.bar i.none{background:var(--off)}
+.pd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
+.pd.gen{background:var(--gen)} .pd.none{background:var(--off)}

@@ -42,12 +42,6 @@
     </div>
   </div>
 
-  <!-- which line the timeline/log shows -->
-  <div class="seg" id="lineSeg" style="display:none">
-    <button data-l="grid" class="act">⚡ الوطنية</button>
-    <button data-l="gen">⚙️ المولدة</button>
-  </div>
-
   <!-- period selector -->
   <div class="seg" id="seg">
     <button data-m="w1" class="act">أسبوع</button>
@@ -71,8 +65,9 @@
     </div>
     <div id="timeline"></div>
     <div class="legend">
-      <span><i class="sw-on"></i> <span id="lgOn">موجودة</span></span>
-      <span><i style="background:var(--off)"></i> <span id="lgOff">مقطوعة</span></span>
+      <span><i style="background:var(--onfill)"></i> الوطنية</span>
+      <span id="lgGen"><i style="background:var(--genfill)"></i> المولدة</span>
+      <span><i style="background:var(--off)"></i> بدون كهرباء</span>
       <span><i style="background:var(--nodata);border:1px solid var(--line)"></i> لا توجد بيانات</span>
     </div>
   </div>
@@ -111,13 +106,11 @@ const CRED = (() => {
 })();
 
 const TEXT = {
-  grid: { on: "الوطنية موجودة", off: "الوطنية مقطوعة", back: "رجعت", gone: "انقطعت", lgOn: "موجودة", lgOff: "مقطوعة",
-          noneDay: "لا توجد انقطاعات في هذا اليوم", noneRange: "لا توجد انقطاعات مسجّلة في هذه المدة" },
-  gen:  { on: "المولدة شغّالة", off: "المولدة مطفأة", back: "اشتغلت", gone: "انطفأت", lgOn: "شغّالة", lgOff: "مطفأة",
-          noneDay: "لم تنطفئ المولدة في هذا اليوم", noneRange: "لا توجد إطفاءات مسجّلة في هذه المدة" },
+  grid: { on: "الوطنية موجودة", off: "الوطنية مقطوعة", back: "رجعت", gone: "انقطعت" },
+  gen:  { on: "المولدة شغّالة", off: "المولدة مطفأة", back: "اشتغلت", gone: "انطفأت" },
 };
 
-let mode = "w1", line = "grid", selDay = "", data = null, range = null;
+let mode = "w1", selDay = "", data = null, range = null, parts = [], END = 0;
 
 function rangeOf(){
   const today = keyOf(new Date());
@@ -166,11 +159,32 @@ function statusRow(which, rowId, tId, sId){
   }
 }
 
+// Split every national-grid outage into "on the generator" (yellow) and "no power" (red) parts.
+function splitParts(){
+  const t = (d) => new Date(d).getTime();
+  const gen = data.gen && (data.gen.on != null || data.gen.offs.length) ? data.gen.offs.map(o => [t(o.started_at), o.ended_at ? t(o.ended_at) : END]) : null;
+  const out = [];
+  for (const o of data.grid.offs){
+    const a = t(o.started_at), z = o.ended_at ? t(o.ended_at) : END, open = !o.ended_at;
+    if (!gen){ out.push({ k:"none", a, z, open }); continue; }
+    const cuts = gen.map(([s, e]) => [Math.max(s, a), Math.min(e, z)]).filter(([s, e]) => e > s).sort((x, y) => x[0] - y[0]);
+    let p = a;
+    for (const [s, e] of cuts){
+      if (e <= p) continue;
+      if (s > p) out.push({ k:"gen", a:p, z:s });
+      out.push({ k:"none", a:Math.max(s, p), z:e });
+      p = e;
+    }
+    if (z > p) out.push({ k:"gen", a:p, z });
+    if (open && out.length) out[out.length - 1].open = true;
+  }
+  return out.filter(x => x.z > x.a).sort((x, y) => y.a - x.a);
+}
+
 function render(){
   document.title = data.name ? `${data.name} · وطني ومولدة` : "وطني ومولدة";
   const hasGen = !!data.gen;
-  $("lineSeg").style.display = hasGen ? "" : "none";
-  if (!hasGen) line = "grid";
+  $("lgGen").style.display = hasGen ? "" : "none";
   if (data.online){
     statusRow("grid", "rowGrid", "tGrid", "sGrid");
     if (hasGen) statusRow("gen", "rowGen", "tGen", "sGen");
@@ -184,14 +198,11 @@ function render(){
     $("rowGen").style.display = "none";
   }
 
-  const T = TEXT[line];
-  document.body.classList.toggle("genview", line === "gen");
-  $("lgOn").textContent = T.lgOn; $("lgOff").textContent = T.lgOff;
-  const offs = data[line] ? data[line].offs : [];
   const now = Date.now();
   const since = data.since ? new Date(data.since).getTime() : Infinity;
-  const end = data.online ? now : (data.last_seen ? new Date(data.last_seen).getTime() : now);
-  $("timeline").innerHTML = timelineRows(range, offs, since, end, now);
+  END = data.online ? now : (data.last_seen ? new Date(data.last_seen).getTime() : now);
+  parts = splitParts();
+  $("timeline").innerHTML = timelineRows(range, data.grid.offs, parts, since, END, now);
   if (selDay && !$("timeline").querySelector(`[data-key="${selDay}"]`)) selDay = "";
   highlightDay(); renderLog();
 }
@@ -200,22 +211,13 @@ function highlightDay(){
   document.querySelectorAll("#timeline .tl-row").forEach(r => r.classList.toggle("sel", !!selDay && r.dataset.key === selDay));
 }
 function renderLog(){
-  const offs = data && data[line] ? data[line].offs : [];
-  const list = selDay ? offs.filter(o => keyOf(new Date(o.started_at)) === selDay) : offs;
-  const T = TEXT[line];
-  $("outBody").innerHTML = list.length ? list.map(o => {
-    const e = o.ended_at ? tm(o.ended_at) : "<b style='color:var(--off)'>مستمر</b>";
-    const ms = (o.ended_at ? new Date(o.ended_at) : new Date()) - new Date(o.started_at);
-    return `<tr><td>${dayName(o.started_at)}</td><td>${tm(o.started_at)}</td><td>${e}</td><td>${dur(ms)}</td></tr>`;
-  }).join("") : `<tr><td colspan="4" class="empty">${selDay ? T.noneDay : T.noneRange}</td></tr>`;
+  const list = selDay ? parts.filter(x => keyOf(new Date(x.a)) === selDay) : parts;
+  $("outBody").innerHTML = list.length ? list.map(x => {
+    const e = x.open ? `<b style="color:var(--${x.k === "gen" ? "gen" : "off"})">مستمر</b>` : tm(x.z);
+    return `<tr><td><i class="pd ${x.k}"></i>${dayName(x.a)}</td><td>${tm(x.a)}</td><td>${e}</td><td>${dur(x.z - x.a)}</td></tr>`;
+  }).join("") : `<tr><td colspan="4" class="empty">${selDay ? "لم تنقطع الوطنية في هذا اليوم" : "لا توجد انقطاعات مسجّلة في هذه المدة"}</td></tr>`;
 }
 
-$("lineSeg").addEventListener("click", (e) => {
-  const b = e.target.closest("button"); if (!b) return;
-  line = b.dataset.l;
-  document.querySelectorAll("#lineSeg button").forEach(x => x.classList.toggle("act", x === b));
-  if (data) render();
-});
 $("seg").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   mode = b.dataset.m; selDay = "";
